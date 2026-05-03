@@ -1,4 +1,4 @@
-import "dotenv/config"; // ⬅️ WAJIB BARIS PERTAMA
+import "dotenv/config";
 import app from "./src/app.js";
 
 console.log("ENV CHECK:", {
