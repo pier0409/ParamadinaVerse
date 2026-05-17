@@ -42,30 +42,61 @@ exports.getUserProfile = async (req, res) => {
       });
     }
 
-    const karya = await Karya.find({
+    let filter = {
       user: user._id,
-      status: "accepted",
-    }).sort({ createdAt: -1 });
+    };
 
-    const totalKarya = karya.length;
+    /*
+      Jika bukan owner profile
+      hanya tampilkan accepted
+    */
+
+    const isOwner = req.user && req.user._id.toString() === user._id.toString();
+
+    if (!isOwner) {
+      filter.status = "accepted";
+    }
+
+    const karya = await Karya.find(filter).sort({
+      createdAt: -1,
+    });
+
+    /*
+      Statistik hanya dari accepted karya
+    */
+
+    const acceptedKarya = karya.filter((item) => item.status === "accepted");
+
+    const totalKarya = acceptedKarya.length;
 
     let totalLikes = 0;
     let totalKomentar = 0;
 
-    karya.forEach((item) => {
+    acceptedKarya.forEach((item) => {
       totalLikes += item.likes.length;
       totalKomentar += item.komentar.length;
     });
 
     const karyaCards = karya.map((item) => ({
       _id: item._id,
+
       image: item.imageUrl,
+
       namaKarya: item.judul,
+
       prodi: item.programStudi,
+
       kategori: item.kategori,
+
       deskripsi: item.deskripsi,
+
+      status: item.status,
+
       totalLike: item.likes.length,
+
       totalKomentar: item.komentar.length,
+
+      createdAt: item.createdAt,
     }));
 
     res.json({

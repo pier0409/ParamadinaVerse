@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const protect = require("../middleware/authMiddleware");
+const protectOptional = require("../middleware/protectOptional");
 
 const {
   updateProfile,
@@ -11,6 +12,6 @@ const {
 
 router.put("/profile", protect, updateProfile);
 
-router.get("/:id", getUserProfile);
+router.get("/:id", protectOptional, getUserProfile);
 
 module.exports = router;
