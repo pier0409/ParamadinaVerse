@@ -18,7 +18,6 @@ export default function AdminNavbar() {
   }
 
   useEffect(() => {
-    // Ambil data user dari localStorage
     const userData = JSON.parse(localStorage.getItem('user') || 'null')
     if (userData) {
       setUser(userData)
@@ -47,9 +46,7 @@ export default function AdminNavbar() {
   const menuItems = [
     { href: "/admin/dashboard", icon: "📊", label: "Dashboard" },
     { href: "/admin/users", icon: "👥", label: "Users" },
-    { href: "/admin/artworks", icon: "🖼️", label: "Artworks" },
-    { href: "/admin/categories", icon: "🏷️", label: "Kategori" },
-    { href: "/admin/reports", icon: "📈", label: "Laporan" }
+    { href: "/admin/artworks", icon: "🖼️", label: "Artworks" }
   ]
 
   return (
@@ -89,7 +86,6 @@ export default function AdminNavbar() {
             
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-6">
-              {/* Menu Items dengan animasi */}
               {menuItems.map((item, index) => (
                 <Link 
                   key={item.href} 
@@ -118,7 +114,7 @@ export default function AdminNavbar() {
               {user && (
                 <div 
                   className="flex items-center space-x-3 pl-6 border-l border-white/20 animate-fadeIn"
-                  style={{ animationDelay: '600ms' }}
+                  style={{ animationDelay: '400ms' }}
                 >
                   <div 
                     className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 hover:scale-110 hover:shadow-lg cursor-pointer transform"
@@ -144,7 +140,7 @@ export default function AdminNavbar() {
               )}
             </div>
 
-            {/* Mobile Menu Button dengan animasi */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-all duration-300 transform hover:scale-110"
@@ -171,7 +167,7 @@ export default function AdminNavbar() {
             </button>
           </div>
 
-          {/* Mobile Menu dengan animasi */}
+          {/* Mobile Menu */}
           {isMenuOpen && (
             <div 
               className="md:hidden rounded-b-xl shadow-lg py-4 mb-4 animate-slideDown"
@@ -227,7 +223,7 @@ export default function AdminNavbar() {
                 {/* Logout Section Mobile */}
                 <div 
                   className="pt-4 border-t border-white/20 animate-fadeIn"
-                  style={{ animationDelay: '700ms' }}
+                  style={{ animationDelay: '500ms' }}
                 >
                   {user && (
                     <div className="flex items-center justify-between px-4 py-3">
@@ -293,7 +289,6 @@ export default function AdminNavbar() {
         </div>
       )}
 
-      {/* Tambahkan styles untuk animasi */}
       <style jsx global>{`
         @keyframes fadeInDown {
           from {

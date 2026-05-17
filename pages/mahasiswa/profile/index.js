@@ -18,7 +18,6 @@ export default function MahasiswaProfile() {
     semester: '',
     bio: '',
     instagram: '',
-    twitter: '',
     linkedin: '',
     portfolio: ''
   })
@@ -36,7 +35,6 @@ export default function MahasiswaProfile() {
     rejectedKarya: 0
   })
 
-  // FUNGSI DIPINDAHKAN KE LUAR useEffect
   const fetchMyArtworks = async (userId) => {
     try {
       const res = await fetch(
@@ -54,9 +52,8 @@ export default function MahasiswaProfile() {
     }
   };
 
-  // FUNGSI DIPINDAHKAN KE LUAR useEffect
   const calculateStatsFromApi = (artworks) => {
-  setStats({
+    setStats({
       totalKarya: artworks.length,
       totalLikes: artworks.reduce((sum, a) => sum + (a.likes_count || 0), 0),
       totalViews: artworks.reduce((sum, a) => sum + (a.views_count || 0), 0),
@@ -77,11 +74,8 @@ export default function MahasiswaProfile() {
     }
     
     setUser(userData)
-
-    // PANGGIL fetchMyArtworks di sini
     fetchMyArtworks(userData.id);
     
-    // Set form data dari user
     setFormData({
       name: userData.name || '',
       email: userData.email || '',
@@ -89,13 +83,9 @@ export default function MahasiswaProfile() {
       semester: userData.semester || '5',
       bio: userData.bio || 'Mahasiswa kreatif yang suka berbagi karya seni digital dan desain. Selalu mencari inspirasi dari kehidupan sehari-hari.',
       instagram: userData.instagram || '@mahasiswa_creative',
-      twitter: userData.twitter || '@mhs_design',
       linkedin: userData.linkedin || 'linkedin.com/in/mahasiswa',
       portfolio: userData.portfolio || 'mahasiswa-portfolio.com'
     })
-    
-    // HAPUS BARIS INI karena calculateStats tidak didefinisikan
-    // calculateStats([])
   }, [])
 
   const handleEditProfile = () => {
@@ -105,7 +95,6 @@ export default function MahasiswaProfile() {
   const handleCancelEdit = () => {
     setIsEditing(false)
     
-    // Reset form ke data asli
     if (user) {
       setFormData({
         name: user.name || '',
@@ -114,7 +103,6 @@ export default function MahasiswaProfile() {
         semester: user.semester || '',
         bio: user.bio || '',
         instagram: user.instagram || '',
-        twitter: user.twitter || '',
         linkedin: user.linkedin || '',
         portfolio: user.portfolio || ''
       })
@@ -122,7 +110,6 @@ export default function MahasiswaProfile() {
   }
 
   const handleSaveProfile = () => {
-    // Simpan ke localStorage
     const updatedUser = {
       ...user,
       ...formData
@@ -132,7 +119,6 @@ export default function MahasiswaProfile() {
     setUser(updatedUser)
     setIsEditing(false)
     
-    // Tampilkan notifikasi sukses
     alert('Profil berhasil diperbarui!')
   }
 
@@ -170,7 +156,6 @@ export default function MahasiswaProfile() {
     <div className="min-h-screen bg-gradient-to-br from-[#08344F]/5 via-white to-[#1276B5]/5">
       <MahasiswaNavbar />
       
-      {/* Update: Menambahkan jarak yang lebih signifikan sama seperti halaman kontak */}
       <div className="pt-8 md:pt-12"></div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -308,14 +293,6 @@ export default function MahasiswaProfile() {
                         />
                         <input
                           type="text"
-                          name="twitter"
-                          value={formData.twitter}
-                          onChange={handleInputChange}
-                          className="bg-white/20 text-white placeholder-white/50 rounded-lg px-4 py-2"
-                          placeholder="Twitter"
-                        />
-                        <input
-                          type="text"
                           name="linkedin"
                           value={formData.linkedin}
                           onChange={handleInputChange}
@@ -342,15 +319,6 @@ export default function MahasiswaProfile() {
                       >
                         <span className="text-lg">📷</span>
                         <span>{user.instagram || '@mahasiswa_creative'}</span>
-                      </a>
-                      <a 
-                        href={`https://twitter.com/${user.twitter?.replace('@', '') || '#'}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors"
-                      >
-                        <span className="text-lg">🐦</span>
-                        <span>{user.twitter || '@mhs_design'}</span>
                       </a>
                       <a 
                         href={user.linkedin?.includes('http') ? user.linkedin : `https://${user.linkedin}` || '#'} 
@@ -503,7 +471,6 @@ export default function MahasiswaProfile() {
             {artworks.map((artwork) => (
               <div key={artwork.id} className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
                 <div className="relative h-48 bg-gradient-to-r from-[#08344F]/10 to-[#1276B5]/10">
-                  {/* Placeholder gambar */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <span className="text-4xl">🎨</span>
