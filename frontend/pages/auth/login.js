@@ -17,8 +17,7 @@ export default function LoginPage() {
     primary: '#083552',
     secondary: '#1276B5',
     gradient: 'linear-gradient(90deg, #083552 0%, #1276B5 100%)',
-    gradientDiagonal:
-      'linear-gradient(135deg, #083552 0%, #0B4A6E 50%, #1276B5 100%)',
+    gradientDiagonal: 'linear-gradient(135deg, #083552 0%, #0B4A6E 50%, #1276B5 100%)',
   };
 
   const stats = [
@@ -28,9 +27,8 @@ export default function LoginPage() {
     { number: '1000+', label: 'Pengunjung' },
   ];
 
-  // Label role untuk ditampilkan di popup
   const roleLabel = {
-    admin: 'Admin',
+    admin: 'Administrator',
     mahasiswa: 'Mahasiswa',
   };
 
@@ -51,11 +49,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Validasi domain hanya untuk mahasiswa — admin pakai email lain
-    const mahasiswaDomains = ['@students.paramadina.ac.id', '@paramadina.ac.id'];
-    const isMahasiswa = mahasiswaDomains.some(domain => emailLower.endsWith(domain));
-
-    // Kirim tanpa hardcode role — biarkan backend yang tentukan
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
@@ -65,7 +58,8 @@ export default function LoginPage() {
           body: JSON.stringify({
             email: emailLower,
             password: password,
-            // Tidak hardcode role; backend return role dari database
+            // Tidak kirim role — backend tentukan dari database
+            // Admin ditentukan dari adminEmails di authController
           }),
         }
       );
@@ -78,16 +72,26 @@ export default function LoginPage() {
         return;
       }
 
-      // Validasi: jika email domain mahasiswa tapi role bukan mahasiswa → tolak
-      if (isMahasiswa && data.role === 'admin') {
-        setError('Akun admin tidak bisa login dengan email mahasiswa');
-        setLoading(false);
-        return;
-      }
-
+      // =============================================
+      // Backend return: { _id, username, email, role, token }
+      // Normalisasi ke format yang dipakai seluruh frontend
+      // =============================================
       const finalUser = {
-        ...data,
-        avatar: data.name?.charAt(0)?.toUpperCase() || '?',
+        _id: data._id,
+        id: data._id,           // fallback untuk kode yang pakai .id
+        name: data.username,    // frontend pakai .name, backend kirim .username
+        username: data.username,
+        email: data.email,
+        role: data.role,
+        token: data.token,
+        avatar: data.username?.charAt(0)?.toUpperCase() || '?',
+        // Field tambahan (akan dilengkapi saat fetch profile)
+        prodi: data.prodi || '',
+        semester: data.semester || '',
+        nim: data.nim || '',
+        instagram: data.instagram || '',
+        linkedin: data.linkedin || '',
+        description: data.description || '',
       };
 
       localStorage.setItem('user', JSON.stringify(finalUser));
@@ -103,7 +107,7 @@ export default function LoginPage() {
     }
   };
 
-  // Redirect berdasarkan role yang dikembalikan backend
+  // Redirect berdasarkan role dari backend
   const handleContinue = () => {
     setShowSuccessPopup(false);
     if (userData?.role === 'admin') {
@@ -147,7 +151,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT PANEL - LOGIN FORM */}
+        {/* RIGHT PANEL */}
         <div className="w-full lg:w-3/5 flex flex-col justify-center p-8 lg:p-16">
           <div className="max-w-md mx-auto w-full">
             <Link
@@ -160,7 +164,6 @@ export default function LoginPage() {
               Kembali
             </Link>
 
-            {/* HEADER — generic, tidak menyebut role */}
             <div className="mb-10">
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Selamat datang kembali
@@ -241,9 +244,8 @@ export default function LoginPage() {
               >
                 {userData.avatar}
               </div>
-              <h3 className="text-xl font-bold mb-2">Login Berhasil</h3>
-              <p className="text-gray-600 mb-1">{userData.name}</p>
-              {/* Badge role dinamis */}
+              <h3 className="text-xl font-bold mb-2">Login Berhasil!</h3>
+              <p className="text-gray-600 mb-3">{userData.name}</p>
               <span
                 className="inline-block px-3 py-1 rounded-full text-xs font-medium"
                 style={{
