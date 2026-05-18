@@ -15,10 +15,7 @@ export default function AdminArtworks() {
   const [showApprovePopup, setShowApprovePopup] = useState(null)
   const [showRejectPopup, setShowRejectPopup] = useState(null)
   const [showDeletePopup, setShowDeletePopup] = useState(null)
-  const [showExportPopup, setShowExportPopup] = useState(false)
-  const [showBulkActionsPopup, setShowBulkActionsPopup] = useState(false)
   const [actionInProgress, setActionInProgress] = useState(null)
-  const [selectedArtworks, setSelectedArtworks] = useState([])
   const [reviewNotes, setReviewNotes] = useState('')
   const router = useRouter()
 
@@ -45,9 +42,7 @@ export default function AdminArtworks() {
         }
       )
       const data = await res.json()
-
       if (!res.ok) throw new Error(data.message)
-
       setArtworks(data)
     } catch (err) {
       console.error('Gagal ambil artworks:', err)
@@ -58,7 +53,6 @@ export default function AdminArtworks() {
 
   const handleStatusChange = async (id, newStatus, notes = '') => {
     setActionInProgress(`status-${id}-${newStatus}`)
-
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/${id}`,
@@ -68,15 +62,11 @@ export default function AdminArtworks() {
             'Content-Type': 'application/json',
             ...getAuthHeader(),
           },
-          body: JSON.stringify({
-            status: newStatus,
-          })
+          body: JSON.stringify({ status: newStatus })
         }
       )
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-
       fetchArtworks()
     } catch (err) {
       console.error('Gagal update status:', err)
@@ -91,7 +81,6 @@ export default function AdminArtworks() {
 
   const handleDelete = async (id) => {
     setActionInProgress(`delete-${id}`)
-
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/${id}`,
@@ -102,10 +91,8 @@ export default function AdminArtworks() {
           }
         }
       )
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.message)
-
       fetchArtworks()
     } catch (err) {
       console.error('Gagal hapus karya:', err)
@@ -116,50 +103,12 @@ export default function AdminArtworks() {
     }
   }
 
-  const handleBulkAction = async (newStatus) => {
-    const actionKey = `bulk-${newStatus}`
-    setActionInProgress(actionKey)
-
-    try {
-      const targets = selectedArtworks.length > 0
-        ? selectedArtworks
-        : filteredArtworks.map(a => a._id)
-
-      await Promise.all(
-        targets.map(id =>
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/${id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              ...getAuthHeader(),
-            },
-            body: JSON.stringify({ status: newStatus })
-          })
-        )
-      )
-
-      fetchArtworks()
-      setSelectedArtworks([])
-    } catch (err) {
-      console.error(`Gagal bulk ${newStatus}:`, err)
-      alert(`Gagal memproses beberapa karya`)
-    } finally {
-      setActionInProgress(null)
-      setShowBulkActionsPopup(false)
-    }
-  }
-
-  const handleBulkApprove = () => handleBulkAction('approved')
-  const handleBulkReject = () => handleBulkAction('rejected')
-
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user') || 'null')
-
     if (!userData || userData.role !== 'admin') {
       router.push('/auth/login')
       return
     }
-
     setUser(userData)
     fetchArtworks()
   }, [router])
@@ -175,7 +124,6 @@ export default function AdminArtworks() {
 
   const filteredArtworks = artworks.filter(artwork => {
     if (filter !== 'all' && artwork.status !== filter) return false
-
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       const matchTitle    = artwork.title?.toLowerCase().includes(q)
@@ -183,38 +131,10 @@ export default function AdminArtworks() {
       const matchCategory = artwork.category?.toLowerCase().includes(q)
       if (!matchTitle && !matchName && !matchCategory) return false
     }
-
     return true
   })
 
   const confirmDelete = (id) => setShowDeletePopup(id)
-
-  const handleExport = () => setShowExportPopup(true)
-
-  const handleExportConfirm = () => {
-    setActionInProgress('export')
-    setTimeout(() => {
-      setShowExportPopup(false)
-      setActionInProgress(null)
-      alert('Export berhasil! File akan didownload otomatis.')
-    }, 2000)
-  }
-
-  const toggleSelectArtwork = (id) => {
-    if (selectedArtworks.includes(id)) {
-      setSelectedArtworks(selectedArtworks.filter(i => i !== id))
-    } else {
-      setSelectedArtworks([...selectedArtworks, id])
-    }
-  }
-
-  const selectAllFiltered = () => {
-    if (selectedArtworks.length === filteredArtworks.length) {
-      setSelectedArtworks([])
-    } else {
-      setSelectedArtworks(filteredArtworks.map(a => a._id))
-    }
-  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -276,20 +196,14 @@ export default function AdminArtworks() {
           @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
           @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-          @keyframes checkmark { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
           .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
           .animate-scaleIn { animation: scaleIn 0.3s ease-out forwards; }
           .animate-slideUp { animation: slideUp 0.3s ease-out forwards; }
           .animate-slideDown { animation: slideDown 0.3s ease-out forwards; }
-          .animate-pulse-once { animation: pulse 0.5s ease-out; }
-          .animate-bounce-once { animation: bounce 0.5s ease-out; }
-          .animate-checkmark { animation: checkmark 0.3s ease-out forwards; }
           .hover-scale { transition: transform 0.3s ease-out; }
           .hover-scale:hover { transform: scale(1.02); }
           .active-scale { transition: transform 0.1s ease-out; }
           .active-scale:active { transform: scale(0.95); }
-          .checkbox-animate { transition: all 0.2s ease-out; }
-          .checkbox-animate:checked { transform: scale(1.1); }
         `}</style>
       </Head>
 
@@ -399,47 +313,12 @@ export default function AdminArtworks() {
               </div>
             </div>
 
-            {/* Selection Info */}
-            {selectedArtworks.length > 0 && (
-              <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100 animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 animate-checkmark">
-                      <span className="text-white text-sm">✓</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-blue-800">{selectedArtworks.length} karya terpilih</p>
-                      <p className="text-blue-600 text-xs">Klik checkbox untuk batalkan pilihan</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={handleBulkApprove} className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg transition-all duration-300 hover-scale active-scale">
-                      {actionInProgress === 'bulk-approved' ? 'Memproses...' : 'Setujui Semua'}
-                    </button>
-                    <button onClick={handleBulkReject} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-all duration-300 hover-scale active-scale">
-                      {actionInProgress === 'bulk-rejected' ? 'Memproses...' : 'Tolak Semua'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Artworks Table */}
             <div className="overflow-x-auto rounded-xl border border-gray-200 animate-fadeIn" style={{ animationDelay: '0.8s' }}>
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                    <th className="text-left py-3 px-3 md:px-6 text-gray-700 font-bold text-xs md:text-sm">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedArtworks.length === filteredArtworks.length && filteredArtworks.length > 0}
-                          onChange={selectAllFiltered}
-                          className="mr-2 checkbox-animate"
-                        />
-                        Karya
-                      </div>
-                    </th>
+                    <th className="text-left py-3 px-3 md:px-6 text-gray-700 font-bold text-xs md:text-sm">Karya</th>
                     <th className="text-left py-3 px-3 md:px-6 text-gray-700 font-bold text-xs md:text-sm">Pembuat</th>
                     <th className="text-left py-3 px-3 md:px-6 text-gray-700 font-bold text-xs md:text-sm">Kategori</th>
                     <th className="text-left py-3 px-3 md:px-6 text-gray-700 font-bold text-xs md:text-sm">Status</th>
@@ -464,23 +343,15 @@ export default function AdminArtworks() {
                       >
                         <td className="py-3 px-3 md:px-6">
                           <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedArtworks.includes(artwork._id)}
-                              onChange={() => toggleSelectArtwork(artwork._id)}
-                              className="mr-3 checkbox-animate"
-                            />
-                            <div className="flex items-center">
-                              <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center mr-3 md:mr-4">
-                                {artwork.image
-                                  ? <img src={artwork.image} alt={artwork.title} className="w-full h-full object-cover rounded-lg" />
-                                  : <span className="text-lg md:text-xl">🖼️</span>
-                                }
-                              </div>
-                              <div>
-                                <p className="font-bold text-gray-800 text-sm md:text-base">{artwork.title || 'Tanpa Judul'}</p>
-                                <p className="text-gray-500 text-xs">ID: {artwork._id}</p>
-                              </div>
+                            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center mr-3 md:mr-4">
+                              {artwork.image
+                                ? <img src={artwork.image} alt={artwork.title} className="w-full h-full object-cover rounded-lg" />
+                                : <span className="text-lg md:text-xl">🖼️</span>
+                              }
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-800 text-sm md:text-base">{artwork.title || 'Tanpa Judul'}</p>
+                              <p className="text-gray-500 text-xs">ID: {artwork._id}</p>
                             </div>
                           </div>
                         </td>
@@ -561,38 +432,6 @@ export default function AdminArtworks() {
             <div className="flex justify-between items-center mt-4 md:mt-6">
               <div className="text-gray-600 text-sm md:text-base">
                 Menampilkan <span className="font-bold">{filteredArtworks.length}</span> dari <span className="font-bold">{artworks.length}</span> karya
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 rounded-2xl border border-blue-100 animate-fadeIn hover-scale transition-all">
-              <h3 className="font-bold text-gray-800 mb-2 md:mb-4 text-sm md:text-base">Export Data</h3>
-              <p className="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm">Export semua data karya ke format Excel atau CSV</p>
-              <button onClick={handleExport} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-1.5 md:py-2 rounded-lg transition-all duration-300 hover-scale active-scale text-xs md:text-sm">
-                Export Semua Karya
-              </button>
-            </div>
-
-            <div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 md:p-6 rounded-2xl border border-green-100 animate-fadeIn hover-scale transition-all">
-              <h3 className="font-bold text-gray-800 mb-2 md:mb-4 text-sm md:text-base">Bulk Actions</h3>
-              <p className="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm">Kelola beberapa karya sekaligus. Pilih karya di tabel terlebih dahulu.</p>
-              <div className="flex gap-1 md:gap-2">
-                <button
-                  onClick={handleBulkApprove}
-                  disabled={!!actionInProgress}
-                  className="flex-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white py-1.5 md:py-2 rounded-lg transition-all duration-300 hover-scale active-scale text-xs"
-                >
-                  {actionInProgress === 'bulk-approved' ? 'Memproses...' : 'Setujui Terpilih'}
-                </button>
-                <button
-                  onClick={handleBulkReject}
-                  disabled={!!actionInProgress}
-                  className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white py-1.5 md:py-2 rounded-lg transition-all duration-300 hover-scale active-scale text-xs"
-                >
-                  {actionInProgress === 'bulk-rejected' ? 'Memproses...' : 'Tolak Terpilih'}
-                </button>
               </div>
             </div>
           </div>
@@ -715,44 +554,6 @@ export default function AdminArtworks() {
                   {actionInProgress === `delete-${showDeletePopup}`
                     ? <div className="flex items-center justify-center"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>Menghapus...</div>
                     : 'Hapus'
-                  }
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Popup */}
-      {showExportPopup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 animate-scaleIn">
-            <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl text-white">📊</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Export Data</h3>
-              <p className="text-gray-600 mb-6">Pilih format untuk export data karya</p>
-              <div className="space-y-3 mb-6">
-                {[
-                  { id: 'excel', label: 'Excel (.xlsx)', icon: '📗', defaultChecked: true },
-                  { id: 'csv', label: 'CSV (.csv)', icon: '📄' },
-                  { id: 'pdf', label: 'PDF (.pdf)', icon: '📕' },
-                ].map(opt => (
-                  <div key={opt.id} className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer">
-                    <input type="radio" id={opt.id} name="exportFormat" className="mr-3" defaultChecked={opt.defaultChecked} />
-                    <label htmlFor={opt.id} className="flex items-center cursor-pointer">
-                      <span className="mr-2">{opt.icon}</span><span>{opt.label}</span>
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <div className="flex space-x-4">
-                <button onClick={() => setShowExportPopup(false)} className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all duration-300 hover-scale active-scale">Batal</button>
-                <button onClick={handleExportConfirm} className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-lg hover:opacity-90 transition-all duration-300 hover-scale active-scale">
-                  {actionInProgress === 'export'
-                    ? <div className="flex items-center justify-center"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>Mengexport...</div>
-                    : 'Export'
                   }
                 </button>
               </div>
