@@ -4,8 +4,7 @@ export default function Document() {
   return (
     <Html lang="id">
       <Head>
-        {/* TITLE */}
-        <title>ParamadinaVerse</title>
+
 
         {/* FAVICON */}
         <link rel="icon" href="/images/Icon512.png" />

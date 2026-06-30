@@ -30,11 +30,11 @@ export default function KaryaDetail() {
   const loadKarya = async () => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/karya/${id}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/artworks/${id}`
       );
       if (!res.ok) { router.push("/404"); return; }
       const data = await res.json();
-      setKarya(data);
+      setKarya({ ...data.artwork, komentar: data.comments });
     } catch (err) {
       console.error(err);
     } finally {
@@ -47,25 +47,28 @@ export default function KaryaDetail() {
     if (!currentUser) { router.push("/login"); return; }
     setLikeLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/karya/${id}/like`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const token = JSON.parse(localStorage.getItem('user') || 'null')?.token;
+      const method = isLiked ? "DELETE" : "POST";
+      const url = isLiked
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/likes/${id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/likes`;
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: isLiked ? null : JSON.stringify({ artworkId: id }),
+      });
       if (!res.ok) throw new Error();
-      const data = await res.json(); // { likes: number, isLiked: bool }
 
       // Update state lokal tanpa reload
       setKarya((prev) => ({
         ...prev,
-        likes: data.isLiked
-          ? [...prev.likes, currentUser._id]
-          : prev.likes.filter((l) =>
-              (l._id ?? l).toString() !== currentUser._id
-            ),
+        likes: isLiked
+          ? prev.likes.filter((l) => (l._id ?? l).toString() !== currentUser._id)
+          : [...(prev.likes || []), currentUser._id],
       }));
     } catch {
       alert("Gagal melakukan like");
@@ -82,21 +85,21 @@ export default function KaryaDetail() {
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = JSON.parse(localStorage.getItem('user') || 'null')?.token;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/karya/${id}/komentar`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/comments`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ comment: komentar }),
+          body: JSON.stringify({ artworkId: id, comment: komentar }),
         }
       );
       if (!res.ok) throw new Error();
-      const newKomentar = await res.json(); // array komentar terbaru
-      setKarya((prev) => ({ ...prev, komentar: newKomentar }));
+      const data = await res.json(); // { comment: { ... } }
+      setKarya((prev) => ({ ...prev, komentar: [...(prev.komentar || []), data.comment] }));
       setKomentar("");
     } catch {
       alert("Gagal mengirim komentar");
@@ -143,7 +146,7 @@ export default function KaryaDetail() {
 
   return (
     <>
-      <Head><title>{karya.judul}</title></Head>
+      <Head><title>{karya.title}</title></Head>
 
       <div className="min-h-screen bg-gray-50">
         <MahasiswaNavbar />
@@ -165,10 +168,10 @@ export default function KaryaDetail() {
               <div className="bg-white rounded-xl p-8 shadow">
 
                 {/* Judul & Badge */}
-                <h1 className="text-3xl font-bold mb-3">{karya.judul}</h1>
+                <h1 className="text-3xl font-bold mb-3">{karya.title}</h1>
                 <div className="flex flex-wrap gap-2 mb-6">
                   <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
-                    {karya.kategori}
+                    {karya.categoryName || karya.category?.name}
                   </span>
                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
                     {karya.programStudi}
@@ -180,10 +183,10 @@ export default function KaryaDetail() {
 
                 {/* Preview Gambar */}
                 <div className="rounded-xl overflow-hidden h-96 bg-gray-100 flex items-center justify-center mb-8">
-                  {karya.imageUrl ? (
+                  {karya.image_url ? (
                     <img
-                      src={karya.imageUrl}
-                      alt={karya.judul}
+                      src={karya.image_url}
+                      alt={karya.title}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -215,7 +218,7 @@ export default function KaryaDetail() {
 
                 {/* Deskripsi */}
                 <h2 className="font-bold text-xl mb-2">Deskripsi</h2>
-                <p className="text-gray-700 leading-relaxed mb-8">{karya.deskripsi}</p>
+                <p className="text-gray-700 leading-relaxed mb-8">{karya.description}</p>
 
                 {/* Detail */}
                 <h2 className="font-bold text-xl mb-4">Detail Karya</h2>
@@ -326,23 +329,23 @@ export default function KaryaDetail() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                      {karya.user?.username?.[0]?.toUpperCase() ?? "M"}
+                      {karya.created_by?.username?.[0]?.toUpperCase() ?? "M"}
                     </div>
                     <div>
-                      <p className="font-medium">{karya.user?.username ?? "Mahasiswa"}</p>
-                      <p className="text-sm text-gray-500">{karya.user?.email ?? "-"}</p>
+                      <p className="font-medium">{karya.created_by?.username ?? "Mahasiswa"}</p>
+                      <p className="text-sm text-gray-500">{karya.created_by?.email ?? "-"}</p>
                     </div>
                   </div>
-                  {karya.user?.prodi && (
+                  {karya.created_by?.prodi && (
                     <div>
                       <p className="text-sm text-gray-500">Prodi</p>
-                      <p className="text-sm">{karya.user.prodi}</p>
+                      <p className="text-sm">{karya.created_by.prodi}</p>
                     </div>
                   )}
-                  {karya.user?.nim && (
+                  {karya.created_by?.nim && (
                     <div>
                       <p className="text-sm text-gray-500">NIM</p>
-                      <p className="text-sm">{karya.user.nim}</p>
+                      <p className="text-sm">{karya.created_by.nim}</p>
                     </div>
                   )}
                 </div>

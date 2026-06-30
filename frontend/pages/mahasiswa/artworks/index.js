@@ -172,15 +172,15 @@ export default function UploadKarya() {
     // Gunakan FormData karena ada file yang dikirim
     const body = new FormData()
     body.append('image', formData.file)          // field 'image' sesuai multer di backend
-    body.append('judul', formData.title)          // sesuai model Karya
-    body.append('kategori', formData.category)    // sesuai model Karya
+    body.append('title', formData.title)          // sesuai model Karya
+    body.append('category', formData.category)    // sesuai model Karya
     body.append('programStudi', getProdiFullName(formData.prodi)) // sesuai model Karya
     body.append('teknik', formData.technique)     // sesuai model Karya
     body.append('durasi', formData.duration || '-') // sesuai model Karya
-    body.append('deskripsi', formData.description) // sesuai model Karya
+    body.append('description', formData.description) // sesuai model Karya
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/karya`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/artworks`,
       {
         method: 'POST',
         headers: {
@@ -245,7 +245,7 @@ export default function UploadKarya() {
 
       // Ambil ID karya dari response backend
       // Backend mengembalikan { message, karya } — karya._id adalah ID-nya
-      setUploadedArtworkId(result.karya?._id || result._id || 'PENDING')
+      setUploadedArtworkId(result.artwork?._id || result._id || 'PENDING')
       setShowSuccessPopup(true)
     } catch (err) {
       alert(err.message)

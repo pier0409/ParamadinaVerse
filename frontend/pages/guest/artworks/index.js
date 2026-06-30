@@ -36,13 +36,30 @@ export default function GuestArtworksGallery() {
     gradient: 'linear-gradient(90deg, #083552 0%, #1276B5 100%)'
   }
 
-  // Gunakan data dari utils/artworksData.js
-  const [artworks, setArtworks] = useState([]);
+  // Normalisasi data dari backend ke shape yang dipakai frontend
+  const normalizeArtwork = (k) => ({
+    _id:        k._id,
+    id:         k._id, // alias
+    title:      k.title || 'Tanpa Judul',
+    category:   k.categoryName || k.category?.name || k.category || '-',
+    prodi:      k.programStudi || '',
+    prodiFull:  k.programStudi || '-',
+    description: k.description || '-',
+    image:      k.image_url || k.thumbnail || '',
+    artist:     k.created_by?.name || k.created_by?.username || 'Unknown',
+    avatar:     (k.created_by?.name || k.created_by?.username || '?').charAt(0).toUpperCase(),
+    year:       k.createdAt ? new Date(k.createdAt).getFullYear() : '-',
+    likes:      Array.isArray(k.likes) ? k.likes.length : (k.likes || 0),
+    comments:   Array.isArray(k.comments) ? k.comments.length : (k.comments || 0),
+    views:      k.views || 0,
+    status:     k.status || 'accepted',
+    tags:       k.tags || [],
+  })
 
 useEffect(() => {
   fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artworks`)
     .then(res => res.json())
-    .then(data => setArtworks(data))
+    .then(data => setArtworks(Array.isArray(data) ? data.map(normalizeArtwork) : []))
     .finally(() => setLoading(false));
 }, []);
 
@@ -264,15 +281,19 @@ useEffect(() => {
                           transitionDirection === 'left' ? 'animate-slideInLeft' : ''}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
               {currentItems.map((artwork) => (
-                <div 
-                  key={artwork.id} 
+                <div
+                  key={artwork._id}
                   className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 group cursor-pointer"
-                  onClick={() => router.push(`/guest/artworks/${artwork.id}`)}
+                  onClick={() => router.push(`/mahasiswa/artworks/${artwork._id}`)}
                 >
                   {/* Image/Thumbnail */}
                   <div className="h-48 bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-6xl opacity-20">🎨</div>
+                      {artwork.image ? (
+                        <img src={artwork.image} alt={artwork.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-6xl opacity-20">🎨</div>
+                      )}
                     </div>
                     <div className="absolute top-4 left-4">
                       <span 

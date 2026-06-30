@@ -33,17 +33,20 @@ export default function AdminArtworks() {
 
   const fetchArtworks = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya`,
-        {
-          headers: {
-            ...getAuthHeader(),
-          }
-        }
-      )
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
-      setArtworks(data)
+      const headers = getAuthHeader()
+      // Fetch semua status karya secara paralel menggunakan review endpoint
+      const [pendingRes, acceptedRes, rejectedRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews?status=pending`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews?status=accepted`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews?status=rejected`, { headers }),
+      ])
+
+      const pendingData  = pendingRes.ok  ? await pendingRes.json()  : []
+      const acceptedData = acceptedRes.ok ? await acceptedRes.json() : []
+      const rejectedData = rejectedRes.ok ? await rejectedRes.json() : []
+
+      // Gabungkan semua karya
+      setArtworks([...pendingData, ...acceptedData, ...rejectedData])
     } catch (err) {
       console.error('Gagal ambil artworks:', err)
     } finally {
@@ -54,15 +57,16 @@ export default function AdminArtworks() {
   const handleStatusChange = async (id, newStatus, notes = '') => {
     setActionInProgress(`status-${id}-${newStatus}`)
     try {
+      const endpoint = newStatus === 'approved' || newStatus === 'accepted' ? 'approve' : 'reject';
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${id}/${endpoint}`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...getAuthHeader(),
           },
-          body: JSON.stringify({ status: newStatus })
+          body: JSON.stringify({ note: notes })
         }
       )
       const data = await res.json()
@@ -83,7 +87,7 @@ export default function AdminArtworks() {
     setActionInProgress(`delete-${id}`)
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/artworks/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -139,7 +143,8 @@ export default function AdminArtworks() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':  return 'bg-amber-500'
-      case 'approved': return 'bg-green-500'
+      case 'approved': 
+      case 'accepted': return 'bg-green-500'
       case 'rejected': return 'bg-red-500'
       default:         return 'bg-gray-500'
     }
@@ -148,7 +153,8 @@ export default function AdminArtworks() {
   const getStatusText = (status) => {
     switch (status) {
       case 'pending':  return 'Menunggu Review'
-      case 'approved': return 'Disetujui'
+      case 'approved': 
+      case 'accepted': return 'Disetujui'
       case 'rejected': return 'Ditolak'
       default:         return status
     }
@@ -170,7 +176,7 @@ export default function AdminArtworks() {
   const stats = {
     total:    artworks.length,
     pending:  artworks.filter(a => a.status === 'pending').length,
-    approved: artworks.filter(a => a.status === 'approved').length,
+    approved: artworks.filter(a => a.status === 'approved' || a.status === 'accepted').length,
     rejected: artworks.filter(a => a.status === 'rejected').length,
   }
 
@@ -344,8 +350,8 @@ export default function AdminArtworks() {
                         <td className="py-3 px-3 md:px-6">
                           <div className="flex items-center">
                             <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center mr-3 md:mr-4">
-                              {artwork.image
-                                ? <img src={artwork.image} alt={artwork.title} className="w-full h-full object-cover rounded-lg" />
+                              {artwork.image_url || artwork.thumbnail
+                                ? <img src={artwork.image_url || artwork.thumbnail} alt={artwork.title} className="w-full h-full object-cover rounded-lg" />
                                 : <span className="text-lg md:text-xl">🖼️</span>
                               }
                             </div>
@@ -356,12 +362,12 @@ export default function AdminArtworks() {
                           </div>
                         </td>
                         <td className="py-3 px-3 md:px-6">
-                          <p className="font-medium text-gray-800 text-sm md:text-base">{artwork.user?.name || 'Tidak diketahui'}</p>
-                          <p className="text-gray-500 text-xs">{artwork.user?.email || ''}</p>
+                          <p className="font-medium text-gray-800 text-sm md:text-base">{artwork.created_by?.name || artwork.created_by?.username || 'Tidak diketahui'}</p>
+                          <p className="text-gray-500 text-xs">{artwork.created_by?.email || ''}</p>
                         </td>
                         <td className="py-3 px-3 md:px-6">
                           <span className="px-2 py-0.5 md:px-3 md:py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                            {artwork.category || 'Tidak ada kategori'}
+                            {artwork.categoryName || artwork.category?.name || artwork.category || 'Tidak ada kategori'}
                           </span>
                         </td>
                         <td className="py-3 px-3 md:px-6">
@@ -370,17 +376,17 @@ export default function AdminArtworks() {
                           </span>
                         </td>
                         <td className="py-3 px-3 md:px-6 text-gray-600 text-sm">
-                          {formatDate(artwork.created_at)}
+                          {formatDate(artwork.createdAt)}
                         </td>
                         <td className="py-3 px-3 md:px-6">
                           <div className="flex items-center space-x-2 md:space-x-4">
                             <div className="flex items-center">
                               <span className="text-red-500 mr-1 text-sm">❤️</span>
-                              <span className="text-xs md:text-sm">{artwork.likes || 0}</span>
+                              <span className="text-xs md:text-sm">{Array.isArray(artwork.likes) ? artwork.likes.length : (artwork.likes || 0)}</span>
                             </div>
                             <div className="flex items-center">
                               <span className="text-blue-500 mr-1 text-sm">💬</span>
-                              <span className="text-xs md:text-sm">{artwork.comments || 0}</span>
+                              <span className="text-xs md:text-sm">{Array.isArray(artwork.comments) ? artwork.comments.length : (artwork.comments || 0)}</span>
                             </div>
                             <div className="flex items-center">
                               <span className="text-gray-500 mr-1 text-sm">👁️</span>

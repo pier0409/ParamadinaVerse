@@ -25,34 +25,25 @@ import Link from 'next/link'
 
 // Helper: normalisasi satu objek karya dari backend ke shape yang dipakai frontend
 function normalizeKarya(k) {
-  const prodiMap = {
-    dkv:  'Desain Komunikasi Visual',
-    ti:   'Teknik Informatika',
-    dp:   'Desain Produk',
-    ikom: 'Ilmu Komunikasi',
-    psi:  'Psikologi',
-    hi:   'Hubungan Internasional',
-    man:  'Manajemen',
-  }
-
-  const prodi = k.programStudi || ''
+  // Prodi bisa tersimpan sebagai kode ('dp') atau nama lengkap ('Desain Produk')
+  const prodi = k.programStudi || k.prodi || ''
 
   return {
     _id:         k._id,
-    title:       k.judul        || 'Tanpa Judul',
-    category:    k.kategori     || '-',
+    title:       k.title        || 'Tanpa Judul',
+    category:    k.categoryName || k.category?.name || k.category || '-',
     prodi:       prodi,
-    prodiFull:   prodiMap[prodi] || prodi || '-',
-    description: k.deskripsi    || '-',
-    image:       k.imageUrl     || '',
-    // artist = username dari relasi user
-    artist:      k.user?.username || 'Unknown',
-    // avatar = huruf pertama username
-    avatar:      k.user?.username?.charAt(0).toUpperCase() || '?',
+    prodiFull:   prodi || '-',
+    description: k.description  || '-',
+    image:       k.image_url    || k.thumbnail || '',
+    // artist = name/username dari relasi created_by
+    artist:      k.created_by?.name || k.created_by?.username || 'Unknown',
+    // avatar = huruf pertama name
+    avatar:      (k.created_by?.name || k.created_by?.username || '?').charAt(0).toUpperCase(),
     year:        k.createdAt ? new Date(k.createdAt).getFullYear() : '-',
-    // likes dan komentar di backend adalah array; hitung panjangnya
+    // likes dan comments di backend adalah array; hitung panjangnya
     likes:       Array.isArray(k.likes)    ? k.likes.length    : (k.likes    || 0),
-    comments:    Array.isArray(k.komentar) ? k.komentar.length : (k.comments || 0),
+    comments:    Array.isArray(k.comments) ? k.comments.length : (k.comments || 0),
     views:       k.views || 0,
     status:      k.status || '',
   }
@@ -108,9 +99,8 @@ export default function MahasiswaDashboard() {
 
   const fetchArtworks = async () => {
     try {
-      // GET /api/karya — backend tidak filter status,
-      // jadi kita filter "accepted" di sisi frontend setelah data masuk
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/karya`)
+      // GET /api/artworks — backend hanya return karya yang status "accepted"
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artworks`)
 
       if (!res.ok) {
         const err = await res.json()
@@ -119,10 +109,8 @@ export default function MahasiswaDashboard() {
 
       const raw = await res.json()
 
-      // Normalisasi semua field + filter hanya karya yang sudah accepted
-      const normalized = raw
-        .filter(k => k.status === 'accepted')
-        .map(normalizeKarya)
+      // Normalisasi semua field (backend sudah filter status=accepted)
+      const normalized = raw.map(normalizeKarya)
 
       setArtworks(normalized)
     } catch (err) {

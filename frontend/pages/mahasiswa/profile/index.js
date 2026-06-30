@@ -53,19 +53,17 @@ export default function MahasiswaProfile() {
       if (!res.ok) throw new Error(data.message)
 
       // Set artworks dari response backend
-      // Field dari backend: _id, namaKarya, kategori, deskripsi, status,
-      //                     totalLike, totalKomentar, createdAt, image, prodi
-      setArtworks(data.karya || [])
+      setArtworks(data.artworks || [])
 
       // Set statistik dari response backend
-      const karya = data.karya || []
+      const karya = data.artworks || []
       setStats({
-        totalKarya: data.statistik?.totalKarya || karya.length,
+        totalKarya: data.statistik?.totalArtwork || karya.length,
         totalLikes: data.statistik?.totalLikes || 0,
-        totalKomentar: data.statistik?.totalKomentar || 0,
+        totalKomentar: data.statistik?.totalComments || 0,
         acceptedKarya: karya.filter(k => k.status === 'accepted').length,
         pendingKarya: karya.filter(k => k.status === 'pending').length,
-        rejectedKarya: karya.filter(k => k.status === 'denied').length,
+        rejectedKarya: karya.filter(k => k.status === 'rejected').length,
       })
 
       // Update formData dari data user terbaru di backend
@@ -136,7 +134,7 @@ export default function MahasiswaProfile() {
       const token = JSON.parse(localStorage.getItem('user') || 'null')?.token
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${user._id || user.id}`,
         {
           method: 'PUT',
           headers: {
@@ -190,7 +188,7 @@ export default function MahasiswaProfile() {
     switch (status) {
       case 'accepted': return 'bg-green-100 text-green-800'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'denied': return 'bg-red-100 text-red-800'
+      case 'rejected': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -199,8 +197,8 @@ export default function MahasiswaProfile() {
     switch (status) {
       case 'accepted': return 'Diterima'
       case 'pending': return 'Menunggu Review'
-      case 'denied': return 'Ditolak'
-      default: return '-'
+      case 'rejected': return 'Ditolak'
+      default: return status || '-'
     }
   }
 
@@ -503,17 +501,17 @@ export default function MahasiswaProfile() {
                   <div key={artwork._id} className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
                     {/* Thumbnail */}
                     <div className="relative h-48 bg-gradient-to-r from-[#08344F]/10 to-[#1276B5]/10">
-                      {artwork.image ? (
+                      {artwork.image_url ? (
                         <img
-                          src={artwork.image}
-                          alt={artwork.namaKarya}
+                          src={artwork.image_url}
+                          alt={artwork.title}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
                             <span className="text-4xl">🎨</span>
-                            <p className="text-sm text-gray-600 mt-2">{artwork.kategori}</p>
+                            <p className="text-sm text-gray-600 mt-2">{artwork.category?.name || artwork.categoryName}</p>
                           </div>
                         </div>
                       )}
@@ -525,22 +523,22 @@ export default function MahasiswaProfile() {
                     </div>
 
                     <div className="p-5">
-                      <h3 className="font-bold text-lg text-gray-800 mb-1">{artwork.namaKarya}</h3>
-                      <p className="text-sm text-gray-500 mb-3">{artwork.kategori}</p>
+                      <h3 className="font-bold text-lg text-gray-800 mb-1">{artwork.title}</h3>
+                      <p className="text-sm text-gray-500 mb-3">{artwork.category?.name || artwork.categoryName}</p>
                       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                         <span>{new Date(artwork.createdAt).toLocaleDateString('id-ID')}</span>
-                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{artwork.prodi}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{artwork.programStudi || artwork.prodi}</span>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1">
                             <span className="text-red-500">❤️</span>
-                            <span className="font-medium">{artwork.totalLike || 0}</span>
+                            <span className="font-medium">{artwork.likes ? artwork.likes.length : 0}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <span className="text-blue-500">💬</span>
-                            <span className="font-medium">{artwork.totalKomentar || 0}</span>
+                            <span className="font-medium">{0}</span>
                           </div>
                         </div>
                         <Link href={`/mahasiswa/karya/${artwork._id}`}>
@@ -594,7 +592,7 @@ export default function MahasiswaProfile() {
                          artwork.status === 'pending' ? 'Anda mengupload karya baru' : 'Karya Anda ditolak'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        "{artwork.namaKarya}" • {new Date(artwork.createdAt).toLocaleDateString('id-ID')}
+                        "{artwork.title}" • {new Date(artwork.createdAt).toLocaleDateString('id-ID')}
                       </p>
                     </div>
                   </div>

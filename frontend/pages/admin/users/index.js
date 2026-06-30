@@ -36,7 +36,7 @@ export default function AdminUsers() {
   const fetchUsers = async () => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users`,
         {
           headers: {
             ...getAuthHeader(),
@@ -91,7 +91,7 @@ export default function AdminUsers() {
     setActionInProgress(`role-${id}`)
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${id}`,
         {
           method: 'PUT',
           headers: {
@@ -117,7 +117,7 @@ export default function AdminUsers() {
     setActionInProgress(`delete-${id}`)
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -147,7 +147,7 @@ export default function AdminUsers() {
     setActionInProgress(`edit-${id}`)
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/${id}`,
         {
           method: 'PUT',
           headers: {

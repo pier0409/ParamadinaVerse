@@ -59,31 +59,32 @@ export default function AdminDashboard() {
       }
 
       // Fetch paralel
-      const [usersRes, karyaRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, { headers }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya`, { headers }),
+      const [statsRes, usersRes, pendingRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/statistics`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/recent-users`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews`, { headers }),
       ])
 
+      const statsData = await statsRes.json()
       const usersData = await usersRes.json()
-      const karyaData = await karyaRes.json()
+      const pendingData = await pendingRes.json()
+
+      if (statsRes.ok) {
+        setStats(prev => ({
+          ...prev,
+          totalUsers: statsData.totalUsers,
+          totalKarya: statsData.totalArtworks,
+          pendingKarya: statsData.pendingReview,
+          acceptedKarya: statsData.acceptedArtworks,
+        }))
+      }
 
       if (usersRes.ok && Array.isArray(usersData)) {
         setRecentUsers(usersData.slice(0, 3))
-        setStats(prev => ({ ...prev, totalUsers: usersData.length }))
       }
 
-      if (karyaRes.ok && Array.isArray(karyaData)) {
-        // Backend return status sebagai string "Menunggu Review" / "Disetujui" / "Ditolak"
-        const pending = karyaData.filter(k => k.status === 'Menunggu Review')
-        const accepted = karyaData.filter(k => k.status === 'Disetujui')
-
-        setPendingKaryaList(pending.slice(0, 3))
-        setStats(prev => ({
-          ...prev,
-          totalKarya: karyaData.length,
-          pendingKarya: pending.length,
-          acceptedKarya: accepted.length,
-        }))
+      if (pendingRes.ok && Array.isArray(pendingData)) {
+        setPendingKaryaList(pendingData.slice(0, 3))
       }
     } catch (err) {
       console.error('Gagal fetch dashboard:', err)
@@ -93,14 +94,14 @@ export default function AdminDashboard() {
   }
 
   // =============================================
-  // ACCEPT KARYA — PUT /api/admin/karya/accept/:id
+  // ACCEPT KARYA — POST /api/reviews/:id/approve
   // =============================================
   const handleAcceptKarya = async (id) => {
     const token = JSON.parse(localStorage.getItem('user') || 'null')?.token
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/accept/${id}`,
-        { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${id}/approve`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
       )
       if (res.ok) {
         alert('Karya berhasil disetujui!')
@@ -115,14 +116,21 @@ export default function AdminDashboard() {
   }
 
   // =============================================
-  // DENIED KARYA — PUT /api/admin/karya/denied/:id
+  // DENIED KARYA — POST /api/reviews/:id/reject
   // =============================================
   const handleDeniedKarya = async (id) => {
     const token = JSON.parse(localStorage.getItem('user') || 'null')?.token
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/karya/denied/${id}`,
-        { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${id}/reject`,
+        { 
+          method: 'POST', 
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` 
+          },
+          body: JSON.stringify({ note: 'Ditolak admin' })
+        }
       )
       if (res.ok) {
         alert('Karya berhasil ditolak!')
