@@ -14,66 +14,80 @@ export default function GuestArtworkDetail() {
   const [liked, setLiked] = useState(false)
   const [relatedArtworks, setRelatedArtworks] = useState([])
 
-  useEffect(() => {
-    if (id) {
-      // Simulasi loading data
-      setTimeout(() => {
-        // Gunakan data yang SAMA dari utils/artworksData.js
-        const artworks = getArtworks()
-        const foundKarya = artworks.find(art => art.id === parseInt(id))
-        
-        if (foundKarya) {
-          setKarya(foundKarya)
-          
-          // Generate karya terkait dari pembuat yang sama
-          const sameArtistArtworks = artworks
-            .filter(art => art.artist === foundKarya.artist && art.id !== parseInt(id))
-            .slice(0, 3)
-            .map(art => ({
-              id: art.id,
-              title: art.title,
-              artist: art.artist,
-              category: art.category,
-              likes: art.likes,
-              image: art.image
-            }))
-          
-          // Jika tidak ada karya lain dari pembuat yang sama, tampilkan dari prodi yang sama
-          if (sameArtistArtworks.length === 0) {
-            const sameProdiArtworks = artworks
-              .filter(art => art.prodi === foundKarya.prodi && art.id !== parseInt(id))
-              .slice(0, 3)
-              .map(art => ({
-                id: art.id,
-                title: art.title,
-                artist: art.artist,
-                category: art.category,
-                likes: art.likes,
-                image: art.image
-              }))
-            setRelatedArtworks(sameProdiArtworks)
-          } else {
-            setRelatedArtworks(sameArtistArtworks)
-          }
-        } else {
-          // Redirect ke 404 jika karya tidak ditemukan
-          router.push('/404')
-        }
-        setLoading(false)
-      }, 500)
-    }
-  }, [id])
+  const [comments, setComments] = useState([])
+  const [artistInfo, setArtistInfo] = useState({
+    avatar: 'M',
+    karyaCount: 0,
+    totalLikes: 0,
+    joined: '-'
+  })
 
-  const handleLike = () => {
+  useEffect(() => {
+    if (!router.isReady || !id) return
+
+    const loadData = async () => {
+      try {
+        // 1. Fetch Detail Karya & Komentar
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artworks/${id}`)
+        if (!res.ok) {
+          router.push('/404')
+          return
+        }
+        const data = await res.json()
+        const artwork = data.artwork
+        setKarya(artwork)
+        setComments(data.comments || [])
+
+        // 2. Fetch Creator Profile & Stats
+        const creatorId = artwork.created_by?._id || artwork.created_by
+        if (creatorId) {
+          const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${creatorId}`)
+          if (userRes.ok) {
+            const userData = await userRes.json()
+            const creator = userData.user || {}
+            const stats = userData.statistik || {}
+            setArtistInfo({
+              avatar: (creator.name || creator.username || 'M').charAt(0).toUpperCase(),
+              karyaCount: stats.totalArtwork || 0,
+              totalLikes: stats.totalLikes || 0,
+              joined: creator.createdAt ? new Date(creator.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long' }) : '-'
+            })
+          }
+        }
+
+        // 3. Fetch Related Artworks
+        const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artworks`)
+        if (listRes.ok) {
+          const listData = await listRes.json()
+          const categoryId = artwork.category?._id || artwork.category
+          const filtered = listData
+            .filter(art => (art.category?._id || art.category) === categoryId && art._id !== id)
+            .slice(0, 3)
+          setRelatedArtworks(filtered)
+        }
+      } catch (err) {
+        console.error('Gagal memuat detail karya:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [router.isReady, id])
+
+  const handleLike = async () => {
+    // Guest cannot like via API if they are not authenticated (protect middleware)
+    // But they can click to toggle local likes count as a visual feedback
     if (liked) {
-      setKarya(prev => ({ ...prev, likes: prev.likes - 1 }))
+      setKarya(prev => ({ ...prev, likes: (prev.likes || []).filter(u => u !== 'guest') }))
     } else {
-      setKarya(prev => ({ ...prev, likes: prev.likes + 1 }))
+      setKarya(prev => ({ ...prev, likes: [...(prev.likes || []), 'guest'] }))
     }
     setLiked(!liked)
   }
 
   const formatDate = (dateString) => {
+    if (!dateString) return '-'
     const date = new Date(dateString)
     return date.toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -117,8 +131,6 @@ export default function GuestArtworkDetail() {
     )
   }
 
-  const artistInfo = getArtistInfo(karya.artist)
-  const comments = getCommentsForArtwork(karya.artist)
 
   return (
     <>
@@ -152,13 +164,13 @@ export default function GuestArtworkDetail() {
                       </h1>
                       <div className="flex items-center flex-wrap gap-2">
                         <span className="bg-gradient-to-r from-[#08344F]/10 to-[#1276B5]/10 text-[#08344F] px-3 py-1 rounded-full text-sm font-medium">
-                          {karya.category}
+                          {karya.categoryName || karya.category?.name || '-'}
                         </span>
                         <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
-                          {karya.year}
+                          {karya.createdAt ? new Date(karya.createdAt).getFullYear() : '-'}
                         </span>
                         <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
-                          {karya.prodiFull}
+                          {karya.programStudi}
                         </span>
                       </div>
                     </div>
@@ -176,19 +188,23 @@ export default function GuestArtworkDetail() {
                         <span className={liked ? 'text-red-500' : ''}>
                           {liked ? '❤️' : '🤍'}
                         </span>
-                        <span className="font-medium">{karya.likes}</span>
+                        <span className="font-medium">{karya.likes?.length || 0}</span>
                       </button>
                     </div>
                   </div>
                   
                   {/* Karya Preview */}
                   <div className="mb-6">
-                    <div className="h-64 md:h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center mb-4">
-                      <div className="text-center">
-                        <div className="text-8xl opacity-20 mb-4">🎨</div>
-                        <p className="text-gray-500">Preview karya</p>
-                        <p className="text-sm text-gray-400 mt-2">Karya oleh {karya.artist}</p>
-                      </div>
+                    <div className="h-64 md:h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center mb-4 overflow-hidden">
+                      {karya.image_url ? (
+                        <img src={karya.image_url} alt={karya.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center">
+                          <div className="text-8xl opacity-20 mb-4">🎨</div>
+                          <p className="text-gray-500">Preview karya</p>
+                          <p className="text-sm text-gray-400 mt-2">Karya oleh {karya.created_by?.name || karya.created_by?.username || 'Unknown'}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -211,19 +227,19 @@ export default function GuestArtworkDetail() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500 mb-1">Pembuat</p>
-                        <p className="font-medium text-gray-800">{karya.artist}</p>
+                        <p className="font-medium text-gray-800">{karya.created_by?.name || karya.created_by?.username || 'Unknown'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 mb-1">Teknik</p>
-                        <p className="font-medium text-gray-800">{karya.technique}</p>
+                        <p className="font-medium text-gray-800">{karya.teknik || '-'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 mb-1">Durasi Pengerjaan</p>
-                        <p className="font-medium text-gray-800">{karya.duration}</p>
+                        <p className="font-medium text-gray-800">{karya.durasi || '-'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 mb-1">Kategori</p>
-                        <p className="font-medium text-gray-800">{karya.category}</p>
+                        <p className="font-medium text-gray-800">{karya.categoryName || karya.category?.name || '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -232,7 +248,7 @@ export default function GuestArtworkDetail() {
                 {/* Guest Restriction Info */}
                 <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                    Komentar ({karya.comments})
+                    Komentar ({comments.length})
                   </h2>
                   
                   {/* Guest Info Banner */}
@@ -269,16 +285,16 @@ export default function GuestArtworkDetail() {
                   <div className="space-y-6">
                     {comments.length > 0 ? (
                       comments.map((comment) => (
-                        <div key={comment.id} className="flex items-start gap-3 pb-6 border-b border-gray-100 last:border-0">
+                        <div key={comment._id} className="flex items-start gap-3 pb-6 border-b border-gray-100 last:border-0">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center text-gray-700 font-bold">
-                            {comment.avatar}
+                            {comment.user?.username?.charAt(0).toUpperCase() || '?'}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-gray-800">{comment.user}</span>
-                              <span className="text-sm text-gray-500">{comment.time}</span>
+                              <span className="font-bold text-gray-800">{comment.user?.name || comment.user?.username || 'Anonim'}</span>
+                              <span className="text-sm text-gray-500">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('id-ID') : '-'}</span>
                             </div>
-                            <p className="text-gray-700">{comment.text}</p>
+                            <p className="text-gray-700">{comment.comment}</p>
                           </div>
                         </div>
                       ))
@@ -302,8 +318,8 @@ export default function GuestArtworkDetail() {
                       {artistInfo.avatar}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-800 text-lg">{karya.artist}</h3>
-                      <p className="text-gray-600">{karya.prodiFull}</p>
+                      <h3 className="font-bold text-gray-800 text-lg">{karya.created_by?.name || karya.created_by?.username}</h3>
+                      <p className="text-gray-600">{karya.programStudi}</p>
                     </div>
                   </div>
                   
@@ -326,7 +342,7 @@ export default function GuestArtworkDetail() {
                   <Link 
                     href={{
                       pathname: '/guest/profile-mahasiswa',
-                      query: { student: karya.artist.toLowerCase().replace(/\s+/g, '-') }
+                      query: { student: (karya.created_by?.name || karya.created_by?.username || '').toLowerCase().replace(/\s+/g, '-') }
                     }}
                   >
                     <button className="w-full mt-4 px-4 py-3 bg-gradient-to-r from-[#08344F] to-[#1276B5] text-white font-medium rounded-lg hover:opacity-90 transition-opacity">
@@ -351,14 +367,14 @@ export default function GuestArtworkDetail() {
                         <span className="text-xl">❤️</span>
                         <span>Likes</span>
                       </div>
-                      <span className="font-bold">{karya.likes}</span>
+                      <span className="font-bold">{karya.likes?.length || 0}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">💬</span>
                         <span>Komentar</span>
                       </div>
-                      <span className="font-bold">{karya.comments}</span>
+                      <span className="font-bold">{comments.length}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -380,21 +396,25 @@ export default function GuestArtworkDetail() {
                   <div className="space-y-4">
                     {relatedArtworks.length > 0 ? (
                       relatedArtworks.map((art) => (
-                        <Link key={art.id} href={`/guest/artworks/${art.id}`}>
+                        <Link key={art._id} href={`/guest/artworks/${art._id}`}>
                           <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-                            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                              <span className="text-2xl opacity-60">🎨</span>
+                            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden">
+                              {art.image_url || art.thumbnail ? (
+                                <img src={art.image_url || art.thumbnail} alt={art.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-2xl opacity-60">🎨</span>
+                              )}
                             </div>
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-800 line-clamp-1">{art.title}</h4>
-                              <p className="text-sm text-gray-500">{art.artist}</p>
+                              <p className="text-sm text-gray-500">{art.created_by?.name || art.created_by?.username}</p>
                               <div className="flex items-center justify-between mt-1">
                                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                  {art.category}
+                                  {art.categoryName || art.category?.name || '-'}
                                 </span>
                                 <span className="text-sm text-gray-500 flex items-center gap-1">
                                   <span>❤️</span>
-                                  <span>{art.likes}</span>
+                                  <span>{art.likes?.length || 0}</span>
                                 </span>
                               </div>
                             </div>

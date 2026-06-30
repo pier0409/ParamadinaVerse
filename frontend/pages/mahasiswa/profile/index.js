@@ -68,6 +68,7 @@ export default function MahasiswaProfile() {
 
       // Update formData dari data user terbaru di backend
       if (data.user) {
+        setUser(prev => ({ ...prev, ...data.user }))
         setFormData({
           username: data.user.username || '',
           email: '',

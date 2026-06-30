@@ -36,6 +36,8 @@ export default function GuestArtworksGallery() {
     gradient: 'linear-gradient(90deg, #083552 0%, #1276B5 100%)'
   }
 
+  const [artworks, setArtworks] = useState([]);
+
   // Normalisasi data dari backend ke shape yang dipakai frontend
   const normalizeArtwork = (k) => ({
     _id:        k._id,

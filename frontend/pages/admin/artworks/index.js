@@ -46,7 +46,25 @@ export default function AdminArtworks() {
       const rejectedData = rejectedRes.ok ? await rejectedRes.json() : []
 
       // Gabungkan semua karya
-      setArtworks([...pendingData, ...acceptedData, ...rejectedData])
+      const allArtworks = [...pendingData, ...acceptedData, ...rejectedData]
+
+      // Fetch jumlah komentar untuk setiap karya secara paralel
+      const artworksWithComments = await Promise.all(
+        allArtworks.map(async (artwork) => {
+          try {
+            const commRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/comments/${artwork._id}`)
+            if (commRes.ok) {
+              const commentsData = await commRes.json()
+              return { ...artwork, commentsCount: commentsData.length }
+            }
+          } catch (e) {
+            console.error(e)
+          }
+          return { ...artwork, commentsCount: 0 }
+        })
+      )
+
+      setArtworks(artworksWithComments)
     } catch (err) {
       console.error('Gagal ambil artworks:', err)
     } finally {
@@ -386,7 +404,7 @@ export default function AdminArtworks() {
                             </div>
                             <div className="flex items-center">
                               <span className="text-blue-500 mr-1 text-sm">💬</span>
-                              <span className="text-xs md:text-sm">{Array.isArray(artwork.comments) ? artwork.comments.length : (artwork.comments || 0)}</span>
+                              <span className="text-xs md:text-sm">{artwork.commentsCount || 0}</span>
                             </div>
                             <div className="flex items-center">
                               <span className="text-gray-500 mr-1 text-sm">👁️</span>
@@ -396,7 +414,7 @@ export default function AdminArtworks() {
                         </td>
                         <td className="py-3 px-3 md:px-6">
                           <div className="flex flex-wrap gap-1 md:gap-2">
-                            <Link href={`/admin/review/${artwork._id}`}>
+                            <Link href={`/mahasiswa/artworks/${artwork._id}`}>
                               <button className="px-2 md:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs md:text-sm rounded-lg transition-all duration-300 hover-scale active-scale whitespace-nowrap">
                                 Detail
                               </button>

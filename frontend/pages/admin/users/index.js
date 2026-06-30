@@ -399,11 +399,11 @@ export default function AdminUsers() {
                           </div>
                         </td>
                         <td className="py-3 px-3 md:px-6 text-gray-600 text-sm">
-                          {userItem.joinDate ? new Date(userItem.joinDate).toLocaleDateString('id-ID') : '-'}
+                          {userItem.createdAt ? new Date(userItem.createdAt).toLocaleDateString('id-ID') : '-'}
                         </td>
                         <td className="py-3 px-3 md:px-6">
                           <div className="flex items-center">
-                            <span className="text-blue-600 font-medium text-sm md:text-base">{userItem.artworks || 0}</span>
+                            <span className="text-blue-600 font-medium text-sm md:text-base">{userItem.totalArtwork || 0}</span>
                             <span className="text-gray-500 text-xs ml-1">karya</span>
                           </div>
                         </td>

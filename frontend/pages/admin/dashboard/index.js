@@ -440,7 +440,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-4 text-gray-600 text-sm">{u.totalKarya} karya</td>
                           <td className="py-4 text-gray-500 text-sm">
-                            {new Date(u.bergabung).toLocaleDateString('id-ID')}
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '-'}
                           </td>
                         </tr>
                       ))
