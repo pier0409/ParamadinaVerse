@@ -6,43 +6,45 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      alias: "user_id",
     },
-
-    karya: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Karya",
-      required: true,
-    },
-
-    judulKarya: {
+    title: {
       type: String,
       required: true,
     },
-
-    tanggalPengajuan: {
-      type: Date,
-      required: true,
-    },
-
-    status: {
-      type: String,
-      enum: ["accepted", "denied"],
-      required: true,
-    },
-
     message: {
       type: String,
       required: true,
     },
-
-    isRead: {
+    type: {
+      type: String,
+      required: true, // e.g., 'artwork_accepted', 'artwork_rejected', 'new_comment'
+    },
+    is_read: {
       type: Boolean,
       default: false,
+      alias: "isRead",
+    },
+    // Keep old fields for backward compatibility
+    karya: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Artwork",
+    },
+    judulKarya: {
+      type: String,
+    },
+    tanggalPengajuan: {
+      type: Date,
+    },
+    status: {
+      type: String,
     },
   },
   {
     timestamps: true,
-  },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 module.exports = mongoose.model("Notification", notificationSchema);
